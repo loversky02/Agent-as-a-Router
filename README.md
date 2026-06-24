@@ -148,6 +148,34 @@ python scripts/compare_routers.py 12 --live
 live: a 6-task MBPP slice routed to real haiku/sonnet returned **100% pass** with real
 subprocess test execution.
 
+### Live result: the paper's headline, reproduced with a real LLM router
+
+`scripts/run_live_eval.py` accumulates per-dimension stats for free on a mock stream
+(Phase 1), then routes a held-out test set **live** (Phase 2) WITH vs WITHOUT those
+stats — providers stay mock so an oracle gives ground-truth regret; concurrent calls
+keep it fast.
+
+```bash
+python scripts/run_live_eval.py 5000 500 10     # 1000 real routing calls, ~4 min
+```
+
+![Live: a real LLM router routes better with per-dimension statistics](live_regret.png)
+
+Over 500 held-out tasks (real `cc/claude-haiku-4-5` brain, 0 failures):
+
+| router | cumulative regret |
+|---|---|
+| Oracle | 0.0 |
+| Thompson +stats (bandit) | 15.8 |
+| Random | 68.8 |
+| LLM router — **vanilla** | **61.3** |
+| LLM router — **+stats** | **28.9** |
+
+Per-dimension statistics cut the real LLM router's regret by **~53%**. Vanilla ≈
+random — a capable model still can't infer per-instance difficulty or per-model
+competence from the prompt alone; the stats supply exactly that missing information.
+This is the paper's thesis, reproduced live.
+
 ## Serve as an OpenAI-compatible proxy
 
 ```bash

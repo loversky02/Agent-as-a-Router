@@ -37,7 +37,12 @@ def make_stream(n: int, seed: int = 7):
         lang = rng.choice(LANGUAGES)
         ttype = rng.choice(TASK_TYPES)
         diff = round(rng.random(), 3)
-        tasks.append(Task(f"t{i:04d}", f"[{ttype}/{lang}] synthetic task #{i}",
+        # Natural-language prompt carries language + type (real signal a vanilla
+        # router can reason about) but NOT the difficulty or per-model competence —
+        # those only the accumulated per-dimension statistics reveal.
+        tasks.append(Task(f"t{i:04d}",
+                          f"A {lang} {ttype} coding task (instance #{i}). "
+                          f"Route it to the most cost-effective model likely to solve it.",
                           lang, ttype, diff))
     return tasks
 
