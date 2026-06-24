@@ -43,16 +43,19 @@ def _configs(providers, costs, lmbda, specs, seed):
     cheapest = min(specs, key=lambda s: s.cost_per_task).name
     strongest = max(specs, key=lambda s: s.cost_per_task).name
     return [
-        (f"Static: {cheapest} (cheapest)", lambda s: P.StaticPolicy(cheapest), True),
-        (f"Static: {strongest} (strongest)", lambda s: P.StaticPolicy(strongest), True),
-        ("Random", lambda s: P.RandomPolicy(seed), True),
-        ("Heuristic (rule on priors)", lambda s: P.HeuristicPolicy(s, costs), True),
+        # (label, make_policy, dimension_aware, hierarchical)
+        (f"Static: {cheapest} (cheapest)", lambda s: P.StaticPolicy(cheapest), True, False),
+        (f"Static: {strongest} (strongest)", lambda s: P.StaticPolicy(strongest), True, False),
+        ("Random", lambda s: P.RandomPolicy(seed), True, False),
+        ("Heuristic (rule on priors)", lambda s: P.HeuristicPolicy(s, costs), True, False),
         ("Bandit (global, vanilla)",
-         lambda s: P.ThompsonSampling(s, costs, lmbda, seed), False),
+         lambda s: P.ThompsonSampling(s, costs, lmbda, seed), False, False),
         ("ACRouter (per-dim, +stats)",
-         lambda s: P.ThompsonSampling(s, costs, lmbda, seed), True),
+         lambda s: P.ThompsonSampling(s, costs, lmbda, seed), True, False),
+        ("ACRouter (hierarchical)",
+         lambda s: P.HierarchicalThompson(s, costs, lmbda, seed), True, True),
         ("Oracle (zero-regret floor)",
-         lambda s: P.OraclePolicy(providers, costs, lmbda), True),
+         lambda s: P.OraclePolicy(providers, costs, lmbda), True, False),
     ]
 
 
@@ -73,9 +76,10 @@ def run(n_tasks=800):
     print("-" * len(header))
 
     results = {}
-    for name, make_policy, dim_aware in _configs(providers, costs, lmbda, specs, seed):
+    for name, make_policy, dim_aware, hierarchical in _configs(providers, costs, lmbda, specs, seed):
         store = ExperienceStore(":memory:")
-        router = ACRouter(providers, store, make_policy(store), costs, lmbda, dim_aware)
+        router = ACRouter(providers, store, make_policy(store), costs, lmbda,
+                          dim_aware, hierarchical)
         records = run_stream(router, tasks, er_fn)
         s = summarize(records)
         results[name] = (s, records)
@@ -93,11 +97,11 @@ def run(n_tasks=800):
     print("  " + _sparkline([r.cum_regret for r in results["ACRouter (per-dim, +stats)"][1]]))
     print("  A flattening curve = the router has stopped making routing mistakes.\n")
 
-    _maybe_plot(results)
+    _maybe_plot(results, n_tasks)
     return results
 
 
-def _maybe_plot(results):
+def _maybe_plot(results, n_tasks):
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -105,17 +109,21 @@ def _maybe_plot(results):
     except Exception:
         print("(install matplotlib for a regret.png plot — text summary shown above)")
         return
-    plt.figure(figsize=(9, 5))
-    for name, (_s, records) in results.items():
-        if "Oracle" in name:
-            continue
-        plt.plot([r.cum_regret for r in records], label=name)
+    plt.figure(figsize=(10, 6))
+    # Worst (highest final regret) first, so the legend reads top-to-bottom like the plot.
+    curves = [(name, recs) for name, (_s, recs) in results.items() if "Oracle" not in name]
+    curves.sort(key=lambda nr: nr[1][-1].cum_regret, reverse=True)
+    for name, recs in curves:
+        plt.plot([r.cum_regret for r in recs], linewidth=1.8,
+                 label=f"{name}  ({recs[-1].cum_regret:.0f})")
     plt.xlabel("tasks seen (streaming)")
-    plt.ylabel("cumulative regret")
-    plt.title("Agent-as-a-Router: cumulative regret over a task stream")
-    plt.legend(fontsize=8)
+    plt.ylabel("cumulative regret  (lower = better)")
+    plt.title(f"Agent-as-a-Router: cumulative regret over {n_tasks:,} streaming tasks "
+              "(CodeRouterBench-scale)")
+    plt.grid(True, alpha=0.25)
+    plt.legend(title="router  (final regret)", fontsize=8, loc="upper left")
     plt.tight_layout()
-    plt.savefig("regret.png", dpi=120)
+    plt.savefig("regret.png", dpi=140)
     print("Saved plot -> regret.png")
 
 
