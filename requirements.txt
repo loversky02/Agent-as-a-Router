@@ -1,0 +1,10 @@
+# The demo runs on the Python standard library only — no install needed:
+#     python scripts/run_demo.py
+#
+# Install the packages below to unlock real providers and the regret plot.
+anthropic>=0.40     # real Claude provider + LLM-as-Router (set ANTHROPIC_API_KEY)
+openai>=1.40        # optional: OpenAI arm in the multi-provider pool
+matplotlib>=3.7     # optional: regret.png curve (eval falls back to ASCII otherwise)
+fastapi>=0.110      # optional: OpenAI-compatible proxy server (src/server.py)
+uvicorn>=0.29       # optional: ASGI server to run the proxy
+pytest>=8.0         # optional (dev): run the test suite with `pytest`
