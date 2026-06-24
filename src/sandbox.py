@@ -13,12 +13,17 @@ import tempfile
 
 
 def extract_code(text: str) -> str:
-    """Strip Markdown code fences a model may wrap its answer in."""
-    if "```" in text:
-        m = re.search(r"```(?:python)?\s*(.*?)```", text, re.S)
-        if m:
-            return m.group(1)
-    return text
+    """Pull runnable Python out of a model reply, tolerating Markdown fences —
+    including a *missing closing fence*, which some gateways emit."""
+    # A complete fenced block wins.
+    m = re.search(r"```(?:python)?[ \t]*\n(.*?)```", text, re.S)
+    if m:
+        return m.group(1)
+    # Otherwise strip stray opening/closing fence markers and use the rest.
+    t = text.strip()
+    t = re.sub(r"^```[a-zA-Z0-9_]*[ \t]*\n?", "", t)   # leading ```lang
+    t = re.sub(r"\n?```[ \t]*$", "", t)                # trailing ```
+    return t
 
 
 def run_tests(code: str, tests, imports=None, timeout: float = 10.0):

@@ -126,8 +126,27 @@ python scripts/run_mbpp.py 30       # offline: proves the real test executor wor
 `scripts/run_mbpp.py` runs the **real** verifier (`src/sandbox.py` executes generated
 code against each problem's `assert` tests in a subprocess). With no API key it runs a
 *self-test* — pushing MBPP reference solutions through the executor to prove the
-harness end-to-end for free. Set `ANTHROPIC_API_KEY` and `config.BACKEND="real"` to
-route real Claude models, generate solutions, and run their tests.
+harness end-to-end for free. To route **real** models, see the next section.
+
+## Run live against an OpenAI-compatible gateway
+
+Point the router at any `/v1` gateway (a self-hosted **9router**, OpenAI, etc.). Copy
+`.env.example` to `.env` (gitignored) and fill in `OPENAI_API_KEY`, `OPENAI_BASE_URL`,
+and `ACROUTER_ROUTER_MODEL`. Then flip the pool/backend **per run** — the committed
+defaults stay offline, so this never affects the demo or CI:
+
+```bash
+# real Claude models solve MBPP tasks, with real test verification + routing
+ACROUTER_POOL=ninerouter ACROUTER_BACKEND=real python scripts/run_mbpp.py 6
+
+# the LLM-as-Router brain makes real routing calls (providers stay mock -> ground-truth regret)
+python scripts/compare_routers.py 12 --live
+```
+
+`config.NINEROUTER_POOL` is the real Claude ladder (`cc/claude-haiku-4-5` →
+`sonnet-4-6` → `opus-4-8`) and `OpenAIProvider` speaks the OpenAI chat API. Verified
+live: a 6-task MBPP slice routed to real haiku/sonnet returned **100% pass** with real
+subprocess test execution.
 
 ## Serve as an OpenAI-compatible proxy
 

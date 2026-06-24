@@ -90,16 +90,38 @@ class ClaudeProvider(Provider):
         return Completion(text, self.spec.name, self.spec.cost_per_task, time.time() - t0)
 
 
+class OpenAIProvider(Provider):
+    """OpenAI-compatible provider — works with any /v1 gateway (e.g. a self-hosted
+    9router) or OpenAI itself. Reads OPENAI_API_KEY + OPENAI_BASE_URL from the env
+    (a .env is auto-loaded by src/config). Pass/fail is decided later by the Verifier.
+    """
+    def complete(self, task) -> Completion:
+        import time
+        from openai import OpenAI
+
+        client = OpenAI()  # base_url + key from env
+        t0 = time.time()
+        resp = client.chat.completions.create(
+            model=self.spec.model_id,
+            messages=[{"role": "user", "content": task.prompt}],
+            max_tokens=4096,
+        )
+        text = resp.choices[0].message.content or ""
+        return Completion(text, self.spec.name, self.spec.cost_per_task, time.time() - t0)
+
+
 def make_provider(spec, backend: str):
     """Factory: in 'mock' backend everything is simulated; in 'real' we dispatch
-    on spec.provider. OpenAI/Ollama are left as clearly-marked extension points."""
+    on spec.provider (claude via Anthropic SDK, openai via any /v1 gateway)."""
     if backend == "mock":
         return MockProvider(spec)
     if spec.provider == "claude":
         return ClaudeProvider(spec)
+    if spec.provider == "openai":
+        return OpenAIProvider(spec)
     raise NotImplementedError(
         f"Real provider '{spec.provider}' not wired yet — add a Provider subclass "
-        f"mirroring ClaudeProvider (same interface)."
+        f"mirroring OpenAIProvider (same interface)."
     )
 
 

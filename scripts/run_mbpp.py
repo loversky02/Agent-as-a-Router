@@ -61,8 +61,8 @@ if __name__ == "__main__":
         sys.exit(f"Missing {DATA} — run: python scripts/fetch_mbpp.py")
     tasks = load_mbpp(DATA, limit=n)
     print(f"Loaded {len(tasks)} MBPP tasks from {DATA}")
-    if os.getenv("ANTHROPIC_API_KEY") and config.BACKEND == "real":
+    if config.BACKEND == "real" and (os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY")):
         routed_eval(tasks)
     else:
-        print("(no ANTHROPIC_API_KEY or BACKEND!='real' -> offline verifier self-test)\n")
+        print("(BACKEND != 'real' or no API key -> offline verifier self-test)\n")
         self_test(tasks)

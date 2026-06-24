@@ -6,6 +6,7 @@ switching which models the router chooses between is a one-line change. The mock
 ignored by real providers.
 """
 from __future__ import annotations
+import os
 from dataclasses import dataclass
 
 
@@ -49,8 +50,31 @@ EIGHT_POOL = [
     ModelSpec("ultra", "mock", "sim-ultra", 1.40, mock_skill=0.94),
 ]
 
-# --- Active settings -------------------------------------------------------
-POOL = CLAUDE_POOL     # swap to MULTI_POOL / LOCAL_POOL
-BACKEND = "mock"       # "mock" = offline & free; "real" = call provider APIs
-LAMBDA_COST = 0.3      # reward = correctness - LAMBDA_COST * cost
+# --- Real Claude ladder via a self-hosted OpenAI-compatible gateway (9router) ---
+NINEROUTER_POOL = [
+    ModelSpec("haiku",  "openai", "cc/claude-haiku-4-5-20251001", 0.05),
+    ModelSpec("sonnet", "openai", "cc/claude-sonnet-4-6",         0.30),
+    ModelSpec("opus",   "openai", "cc/claude-opus-4-8",           1.00),
+]
+
+
+def _load_dotenv(path=".env"):
+    """Load KEY=VALUE lines from a .env file into the environment (no dependency)."""
+    if os.path.exists(path):
+        for line in open(path):
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                os.environ.setdefault(k.strip(), v.strip())
+
+
+_load_dotenv()
+
+# --- Active settings (env-overridable; defaults stay offline & free) ----------
+# Switch a live run with, e.g.:  ACROUTER_POOL=ninerouter ACROUTER_BACKEND=real ...
+_POOLS = {"claude": CLAUDE_POOL, "multi": MULTI_POOL, "local": LOCAL_POOL,
+          "eight": EIGHT_POOL, "ninerouter": NINEROUTER_POOL}
+POOL = _POOLS.get(os.getenv("ACROUTER_POOL", "claude"), CLAUDE_POOL)
+BACKEND = os.getenv("ACROUTER_BACKEND", "mock")      # "real" -> call provider APIs
+LAMBDA_COST = float(os.getenv("ACROUTER_LAMBDA", "0.3"))
 RANDOM_SEED = 7

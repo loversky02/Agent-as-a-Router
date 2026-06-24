@@ -118,13 +118,22 @@ class LLMRouterPolicy:
 
 
 def _default_complete(prompt: str) -> str:
-    """Default LLM call for LLMRouterPolicy — a cheap, fast Claude model."""
-    from anthropic import Anthropic
-    client = Anthropic()  # reads ANTHROPIC_API_KEY
-    msg = client.messages.create(
-        model="claude-haiku-4-5-20251001", max_tokens=200,
+    """Default LLM call for LLMRouterPolicy — an OpenAI-compatible chat model.
+
+    Reads OPENAI_API_KEY + OPENAI_BASE_URL and ACROUTER_ROUTER_MODEL from the env, so
+    it works against any /v1 gateway (e.g. a self-hosted 9router) or OpenAI itself.
+    A cheap model is the right choice here — the router should cost less than the
+    models it routes to.
+    """
+    import os
+    from openai import OpenAI
+
+    client = OpenAI()
+    model = os.getenv("ACROUTER_ROUTER_MODEL", "gpt-4o-mini")
+    resp = client.chat.completions.create(
+        model=model, max_tokens=200,
         messages=[{"role": "user", "content": prompt}])
-    return "".join(b.text for b in msg.content if getattr(b, "type", None) == "text")
+    return resp.choices[0].message.content or ""
 
 
 def _parse_choice(text, models):

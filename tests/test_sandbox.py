@@ -19,3 +19,11 @@ def test_timeout():
 def test_extract_code_strips_fences():
     assert sandbox.extract_code("```python\nx = 1\n```").strip() == "x = 1"
     assert sandbox.extract_code("no fences here") == "no fences here"
+
+
+def test_extract_code_handles_missing_closing_fence():
+    # Regression: a gateway emitted an opening ```python with no closing fence.
+    raw = "```python\ndef f():\n    return 1\n"
+    code = sandbox.extract_code(raw)
+    assert code.lstrip().startswith("def f")
+    assert sandbox.run_tests(code, ["assert f() == 1"])[0]
