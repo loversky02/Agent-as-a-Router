@@ -3,7 +3,6 @@ __pycache__/
 .DS_Store
 *.sqlite
 data/mbpp.json
-regret.png
 .pytest_cache/
 .venv/
 .claude/settings.local.json

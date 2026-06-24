@@ -1,7 +1,16 @@
 # Agent-as-a-Router (ACRouter)
 
+[![CI](https://github.com/loversky02/Agent-as-a-Router/actions/workflows/ci.yml/badge.svg)](https://github.com/loversky02/Agent-as-a-Router/actions/workflows/ci.yml) [![arXiv](https://img.shields.io/badge/arXiv-2606.22902-b31b1b.svg)](https://arxiv.org/abs/2606.22902) ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+
 A learning router for coding models, built from the paper
 [*Agent-as-a-Router* (arXiv:2606.22902)](https://arxiv.org/abs/2606.22902).
+
+![ACRouter cumulative regret over 10,000 streaming tasks — the learning router reaches the lowest regret among all routers](regret.png)
+
+> Cumulative regret over a 10k-task stream (lower is better). The learning router
+> (**ACRouter, per-dim +stats** — pink, bottom) keeps making fewer routing mistakes
+> as it runs, while static baselines accrue regret linearly — the thesis in one
+> picture. Regenerate with `python scripts/run_demo.py 10000`.
 
 Most routers pick a model with a **static, one-off classification**. The paper's
 insight is that the real bottleneck is an **information deficit**: the router never
